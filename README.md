@@ -1,164 +1,150 @@
-# Multi-Modal-AI-Insurance-Claim-System
-Built a Multimodal Evidence Review System that analyzes conversations and images to validate insurance claims using vision-language understanding, evidence grounding, and explainable rule-based reasoning.
+# Multimodal Evidence Review System for Automated Insurance Claim Assessment
 
-# HackerRank Orchestrate
+The Multimodal Evidence Review System is an end-to-end AI-powered claim assessment platform designed to emulate the reasoning process of an insurance adjuster. The system reviews claims involving cars, laptops, and packages by jointly understanding textual conversations and visual evidence to determine whether a reported issue is genuinely supported by the available evidence.
 
-Starter repository for the **HackerRank Orchestrate** 24-hour hackathon.
+Unlike traditional automation pipelines that rely solely on text extraction or image classification, our system treats images as the primary source of truth and performs evidence-grounded reasoning over multiple modalities. It interprets user conversations, extracts claimed damages, analyzes one or more submitted images, applies domain-specific evidence standards, and produces structured, explainable decisions.
 
-Build a system that verifies visual evidence for damage claims across three object types: **cars**, **laptops**, and **packages**.
+The architecture follows a modular, fault-isolated pipeline:
 
-Your system will receive claim conversations, one or more submitted images, user claim history, and minimum evidence requirements. It must decide whether the submitted images support the claim, contradict it, or do not provide enough information.
+**Ingestion → Sanitization → Parsing → Retrieval → Grounding → Vision-Language Analysis → Validation → Deterministic Rules Engine → Decision Output → Evaluation**
 
-Read [`problem_statement.md`](./problem_statement.md) for the full task spec, input/output schema, and allowed values.
+### Core Capabilities
 
----
+#### 1. Multimodal Understanding
 
-## Contents
+The system simultaneously reasons over:
 
-1. [Repository layout](#repository-layout)
-2. [What you need to build](#what-you-need-to-build)
-3. [Where your code goes](#where-your-code-goes)
-4. [Quickstart](#quickstart)
-5. [Evaluation](#evaluation)
-6. [Chat transcript logging](#chat-transcript-logging)
-7. [Submission](#submission)
-8. [Judge interview](#judge-interview)
+* User conversations
+* Multi-image submissions
+* Historical claimant metadata
+* Evidence requirement specifications
 
----
+This enables the model to understand claims beyond isolated text or images and instead reason over the complete context.
 
-## Repository layout
+#### 2. Claim Parsing and Structured Understanding
 
-```text
-.
-├── AGENTS.md                         # Rules for AI coding tools + transcript logging
-├── problem_statement.md              # Full task description and I/O schema
-├── README.md                         # You are here
-├── code/                             # Build your solution here
-│   ├── main.py                       # Suggested terminal entry point
-│   └── evaluation/
-│       └── main.py                   # Suggested evaluation entry point
-└── dataset/
-    ├── sample_claims.csv             # Inputs + expected outputs for development
-    ├── claims.csv                    # Inputs only; run your system on these rows
-    ├── user_history.csv              # Historical claim counts and risk context
-    ├── evidence_requirements.csv     # Minimum image evidence requirements
-    └── images/
-        ├── sample/                   # Images referenced by sample_claims.csv
-        └── test/                     # Images referenced by claims.csv
-```
+The system transforms unstructured conversations into structured claim representations by extracting:
 
----
+* Claimed issue type
+* Object part affected
+* Multiple damage mentions
+* Conversational context
+* Multilingual and code-switched content
 
-## What you need to build
+For example:
 
-A system that, for each row in `dataset/claims.csv`, produces one row in `output.csv`.
+"Front bumper is dented and left headlight is cracked."
 
-Input fields:
+is decomposed into multiple independent damage atoms, enabling granular reasoning.
 
-| Column | Meaning |
-|---|---|
-| `user_id` | User submitting the claim; use this to look up `dataset/user_history.csv` |
-| `image_paths` | One or more submitted image paths, separated by semicolons |
-| `user_claim` | Chat transcript describing the issue |
-| `claim_object` | `car`, `laptop`, or `package` |
+#### 3. Evidence-Grounded Vision Analysis
 
-Required output fields:
+Submitted images are inspected individually rather than merged blindly.
 
-| Column | Meaning |
-|---|---|
-| `evidence_standard_met` | Whether the image set is sufficient to evaluate the claim |
-| `evidence_standard_met_reason` | Short reason for the evidence decision |
-| `risk_flags` | Semicolon-separated risk flags, or `none` |
-| `issue_type` | Visible issue type |
-| `object_part` | Relevant object part |
-| `claim_status` | `supported`, `contradicted`, or `not_enough_information` |
-| `claim_status_justification` | Concise explanation grounded in the image evidence |
-| `supporting_image_ids` | Image IDs supporting the decision, or `none` |
-| `valid_image` | Whether the image set is usable for automated review |
-| `severity` | `none`, `low`, `medium`, `high`, or `unknown` |
+The system determines:
 
-Hard requirements:
+* Whether the claimed object is visible
+* Whether damage is visible
+* Which object part is affected
+* Type and severity of damage
+* Presence of quality issues
+* Consistency across multiple images
 
-- Must read the provided CSV files and local images.
-- Must produce `output.csv` with the exact schema in `problem_statement.md`.
-- Must include an evaluation workflow
-- Must avoid hardcoded test labels or file-specific answers.
+This prevents false conclusions arising from partial visibility, poor image quality, or conflicting evidence.
 
-Beyond that you are free to bring your own approach: VLMs, LLMs, structured prompting, rule layers, batching, caching, evaluation pipelines, model comparison, or anything else.
+#### 4. Deterministic Rule-Based Decision Making
 
----
+Instead of allowing the language model to directly make claim decisions, the system uses a deterministic reasoning engine that consumes extracted evidence and produces explainable outcomes.
 
-## Where your code goes
+Claims are categorized as:
 
-All of your work belongs in [`code/`](./code/). The repo ships with empty starter files that you can grow into your full solution.
+* Supported
+* Contradicted
+* Not Enough Information
 
-Suggested conventions:
+The rules engine evaluates:
 
-- Put your main runnable solution in `code/main.py`, or document your own entry point clearly.
-- Put evaluation code under `code/evaluation/` or an `evaluation/` folder included in your final `code.zip`.
-- Write final predictions to `output.csv`.
+* Evidence sufficiency
+* Damage visibility
+* Cross-image consistency
+* Object mismatches
+* Ambiguous evidence scenarios
+* Risk indicators
 
----
+This hybrid approach significantly reduces hallucinations and improves reproducibility.
 
-## Quickstart
+#### 5. Robust Handling of Ambiguous Evidence
 
-Clone this repository:
+The system incorporates conservative reasoning policies for conflicting evidence.
 
-```bash
-git clone git@github.com:interviewstreet/hackerrank-orchestrate-june26.git
-cd hackerrank-orchestrate-june26
-```
+For example:
 
-You are free to use any language or runtime. Python, JavaScript, and TypeScript are all reasonable choices.
+Image A → clearly shows no damage.
+Image B → blurry image suggests possible damage.
 
----
+Instead of prematurely contradicting the claim, the system escalates the case to:
 
-## Evaluation
+Not Enough Information + Manual Review Required
 
-The evaluation report should include:
+This mirrors real-world insurance workflows where uncertain evidence is escalated rather than incorrectly rejected.
 
-- metrics on `dataset/sample_claims.csv`
-- at least two strategies, prompts, or model configurations compared
-- the final strategy used for `output.csv`
-- operational analysis covering model calls, token usage, image usage, approximate cost, runtime, and TPM/RPM considerations
+#### 6. Adversarial Robustness
 
----
+The platform is resilient to malicious or misleading inputs, including:
 
-## Chat transcript logging
+* Prompt injection attempts
+* Embedded instructions in conversations
+* Distractor information
+* Multilingual and noisy conversations
+* Conflicting image submissions
+* Low-quality evidence
 
-This repo ships with an `AGENTS.md` that modern AI coding tools may read. It instructs the tool to append conversation turns to a shared log file:
+All conversational inputs are explicitly treated as untrusted evidence and cannot override visual observations.
 
-| Platform | Path |
-|---|---|
-| macOS / Linux | `$HOME/hackerrank_orchestrate/log.txt` |
-| Windows | `%USERPROFILE%\hackerrank_orchestrate\log.txt` |
+#### 7. Explainable Outputs
 
-You will upload this log as your chat transcript at submission time. The chat transcript means your conversation with the AI coding tool you used to build the system. It is not the runtime logs, reasoning trace, or conversation history produced by the claim-verification agent you are building.
+For every claim, the system produces structured and auditable outputs, including:
 
-If you use multiple AI tools, include the relevant conversation logs from all of them in the same transcript file. Separate each tool's section with a clear divider and label it with the tool name.
+* Evidence standard satisfaction
+* Claim status
+* Risk flags
+* Issue type
+* Object part
+* Supporting image identifiers
+* Image validity
+* Severity assessment
+* Human-readable justifications
 
-Never paste secrets into the chat. If secrets are needed, use environment variables.
+Every prediction is accompanied by evidence-based reasoning rather than opaque confidence scores.
 
----
+#### 8. Production-Oriented Engineering
 
-## Submission
+The system was designed with production concerns in mind:
 
-Submit the following files as instructed by HackerRank:
+* Modular architecture
+* Fault isolation and graceful degradation
+* Deterministic outputs
+* Typed schemas and validations
+* Evaluation framework
+* Strategy comparison experiments
+* Provider failure handling
+* Batch execution resilience
 
-1. **Code zip**: zip your runnable solution, README, prompts/configs, and evaluation folder. Exclude virtualenvs, `node_modules`, build artifacts, and unnecessary generated files.
-2. **Predictions CSV**: your final `output.csv` for all rows in `dataset/claims.csv`.
-3. **Chat transcript**: the `log.txt` from the path in [Chat transcript logging](#chat-transcript-logging).
+Even under external provider failures or API rate limits, the system continues processing claims by safely producing fallback decisions instead of crashing.
 
-Before submitting, confirm:
+### Technical Highlights
 
-- `output.csv` has one row per row in `dataset/claims.csv`.
-- `output.csv` has the exact required columns in the exact required order.
-- Your evaluation files are included in `code.zip`.
+* Vision-Language Models (Gemini 2.5 Flash)
+* Multimodal reasoning over text and images
+* Structured claim parsing
+* Evidence retrieval and grounding
+* Deterministic rules engine
+* Explainable decision generation
+* Prompt injection resistance
+* Multi-image conflict resolution
+* End-to-end evaluation framework
+* Fault-tolerant batch processing
 
----
+### Outcome
 
-## Judge interview
-
-After submission, the AI Judge may ask about your approach, implementation decisions, model usage, evaluation strategy, and how you used AI while building the solution.
-
-Be prepared to explain your solution in detail.
+The final system functions as an intelligent multimodal claims reviewer that combines the perception abilities of vision-language models with deterministic, evidence-grounded reasoning to deliver trustworthy, explainable, and production-ready insurance claim assessments.
